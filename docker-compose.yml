@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  openclaw:
+    image: openclaw/openclaw:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./config:/app/config:ro
+      - openclaw-data:/app/data
+
+  telegram-bot:
+    image: openclaw/telegram-bridge:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - openclaw
+
+volumes:
+  openclaw-data:
