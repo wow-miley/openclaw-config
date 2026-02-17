@@ -39,26 +39,36 @@ echo "This is interactive — follow the prompts to authenticate and configure."
 echo ""
 openclaw onboard --install-daemon
 
+# Deploy repo config before starting the gateway
+echo "Deploying config from repo..."
+mkdir -p ~/.openclaw
+cp "$REPO_DIR/config/openclaw.json" ~/.openclaw/openclaw.json
+
 # Install as systemd service for persistence across reboots
 echo "Installing gateway as systemd service..."
 openclaw gateway install
 sudo loginctl enable-linger "$USER"
 systemctl --user enable --now openclaw-gateway.service
+sleep 3
 
-# Copy config from repo
-echo "Deploying config from repo..."
-mkdir -p ~/.openclaw
-cp "$REPO_DIR/config/openclaw.json" ~/.openclaw/openclaw.json
+# Configure Telegram channel
+if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+  echo ""
+  echo "No TELEGRAM_BOT_TOKEN found in .env."
+  echo "Get one from @BotFather on Telegram (/newbot), then paste it here."
+  echo ""
+  read -rp "Telegram bot token (or press Enter to skip): " TELEGRAM_BOT_TOKEN
+fi
 
-# Add Telegram channel if token is set
 if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
   echo "Adding Telegram channel..."
   openclaw channels add --channel telegram --token "$TELEGRAM_BOT_TOKEN"
+  systemctl --user restart openclaw-gateway.service
+  sleep 3
+else
+  echo "Skipping Telegram setup. Run this later:"
+  echo "  openclaw channels add --channel telegram --token \"<your-token>\""
 fi
-
-# Restart gateway to pick up config
-systemctl --user restart openclaw-gateway.service
-sleep 3
 
 # Install Tailscale
 if ! command -v tailscale &> /dev/null; then
