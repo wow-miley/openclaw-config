@@ -6,18 +6,31 @@ echo "=== OpenClaw Server Setup ==="
 # Update system
 sudo apt-get update && sudo apt-get upgrade -y
 
-# Install Docker
-if ! command -v docker &> /dev/null; then
-  echo "Installing Docker..."
-  curl -fsSL https://get.docker.com | sh
-  sudo usermod -aG docker "$USER"
-  echo "Docker installed. You may need to log out and back in for group changes."
+# Install Node.js 22+ (required by OpenClaw)
+if ! command -v node &> /dev/null || [ "$(node --version | cut -d. -f1 | tr -d v)" -lt 22 ]; then
+  echo "Installing Node.js 22..."
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs
 fi
 
-# Install Docker Compose plugin
-if ! docker compose version &> /dev/null; then
-  echo "Installing Docker Compose plugin..."
-  sudo apt-get install -y docker-compose-plugin
+echo "Node version: $(node --version)"
+
+# Install OpenClaw
+if ! command -v openclaw &> /dev/null; then
+  echo "Installing OpenClaw..."
+  curl -fsSL https://openclaw.ai/install.sh | bash
+fi
+
+echo "OpenClaw version: $(openclaw --version)"
+
+# Run onboarding (auth, gateway config, daemon install)
+echo "Running OpenClaw onboarding..."
+openclaw onboard --install-daemon
+
+# Add Telegram channel if token is set
+if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
+  echo "Adding Telegram channel..."
+  openclaw channels add --channel telegram --token "$TELEGRAM_BOT_TOKEN"
 fi
 
 # Install Tailscale
@@ -34,4 +47,5 @@ else
 fi
 
 echo "=== Setup complete ==="
-echo "Next: copy .env.example to .env, fill in values, then run scripts/deploy.sh"
+echo "Gateway status:"
+openclaw gateway status

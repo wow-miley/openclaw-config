@@ -1,0 +1,26 @@
+{
+  // Gateway settings
+  gateway: {
+    port: 18789,
+    bind: "tailnet",
+  },
+
+  // Telegram channel
+  channels: {
+    telegram: {
+      enabled: true,
+      // Token loaded from TELEGRAM_BOT_TOKEN env var
+      dmPolicy: "pairing",
+      groups: {
+        "*": { requireMention: true },
+      },
+    },
+  },
+
+  // Agent defaults
+  agents: {
+    defaults: {
+      model: { primary: "sonnet" },
+    },
+  },
+}
