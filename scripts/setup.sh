@@ -4,7 +4,7 @@ set -euo pipefail
 echo "=== OpenClaw Server Setup ==="
 
 # Update system
-sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get update && sudo apt-get -o Dpkg::Options::="--force-confold" upgrade -y
 
 # Install Node.js 22+ (required by OpenClaw)
 if ! command -v node &> /dev/null || [ "$(node --version | cut -d. -f1 | tr -d v)" -lt 22 ]; then
