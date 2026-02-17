@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
-echo "=== Deploying Minnetonka ==="
+echo "=== Deploying OpenClaw ==="
 
 # Pull latest config
 git pull --ff-only

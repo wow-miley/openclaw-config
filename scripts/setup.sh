@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Minnetonka Server Setup ==="
+echo "=== OpenClaw Server Setup ==="
 
 # Update system
 sudo apt-get update && sudo apt-get upgrade -y
@@ -28,7 +28,7 @@ fi
 
 # Bring up Tailscale
 if [ -n "${TAILSCALE_AUTH_KEY:-}" ]; then
-  sudo tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="${SERVER_HOSTNAME:-minnetonka}"
+  sudo tailscale up --authkey="$TAILSCALE_AUTH_KEY" --hostname="${SERVER_HOSTNAME:-openclaw}"
 else
   echo "Set TAILSCALE_AUTH_KEY in .env to auto-join Tailscale, or run: sudo tailscale up"
 fi

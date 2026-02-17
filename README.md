@@ -1,4 +1,4 @@
-# Minnetonka — OpenClaw on Linode
+# OpenClaw on Linode
 
 OpenClaw instance running on a Linode server with Telegram bot integration.
 
