@@ -3,6 +3,15 @@
   gateway: {
     port: 18789,
     bind: "tailnet",
+    auth: {
+      mode: "token",
+      token: "${GATEWAY_TOKEN}",
+    },
+  },
+
+  // Logging — redact sensitive data from tool output
+  logging: {
+    redactSensitive: "tools",
   },
 
   // Telegram channel
@@ -17,10 +26,74 @@
     },
   },
 
-  // Agent defaults
+  // Model routing — cheap defaults, expensive models scoped to agents
   agents: {
     defaults: {
-      model: { primary: "sonnet" },
+      model: {
+        primary: "openrouter/google/gemini-2.5-flash",
+        fallbacks: ["anthropic/claude-sonnet-4-5"],
+      },
+      tools: {
+        allow: ["read", "write", "edit", "web_search", "web_fetch"],
+        deny: ["exec", "cron", "gateway", "nodes"],
+      },
+      heartbeat: {
+        model: "openrouter/openai/gpt-4.1-nano",
+      },
+    },
+
+    // Named agents for specific roles
+    main: {
+      model: {
+        primary: "anthropic/claude-sonnet-4-5",
+        fallbacks: ["openrouter/google/gemini-2.5-flash"],
+      },
+      tools: {
+        allow: ["read", "write", "edit", "web_search", "web_fetch", "exec"],
+      },
+    },
+    monitor: {
+      model: {
+        primary: "openrouter/openai/gpt-4.1-nano",
+      },
+    },
+    researcher: {
+      model: {
+        primary: "openrouter/google/gemini-2.5-flash",
+        fallbacks: ["anthropic/claude-sonnet-4-5"],
+      },
+    },
+  },
+
+  // Concurrency limits — prevent cascading failures and cost spikes
+  maxConcurrent: 4,
+  subagents: {
+    maxConcurrent: 8,
+  },
+
+  // Memory search — cheap embeddings
+  memorySearch: {
+    sources: ["memory", "sessions"],
+    experimental: { sessionMemory: true },
+    provider: "openai",
+    model: "text-embedding-3-small",
+  },
+
+  // Context pruning — drop stale context, keep recent continuity
+  contextPruning: {
+    mode: "cache-ttl",
+    ttl: "6h",
+    keepLastAssistants: 3,
+  },
+
+  // Compaction — auto-distill sessions to memory files at 40k tokens
+  compaction: {
+    mode: "default",
+    memoryFlush: {
+      enabled: true,
+      softThresholdTokens: 40000,
+      prompt: "Distill this session to memory/YYYY-MM-DD.md. Focus on decisions, state changes, lessons, blockers. If nothing worth storing: NO_FLUSH",
+      systemPrompt: "Extract only what is worth remembering. No fluff.",
     },
   },
 }
