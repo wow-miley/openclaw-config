@@ -15,11 +15,10 @@ cp config/openclaw.json ~/.openclaw/openclaw.json
 chmod 700 ~/.openclaw
 chmod 600 ~/.openclaw/openclaw.json
 
-# Restart the gateway
+# Restart the gateway via systemd
 echo "Restarting gateway..."
-openclaw gateway stop 2>/dev/null || true
-openclaw gateway --port 18789 &
-disown
+systemctl --user restart openclaw-gateway.service
+sleep 3
 
 echo "=== Deploy complete ==="
 openclaw gateway status

@@ -10,3 +10,4 @@ __pycache__/
 .runbook-cache/
 data/
 logs/
+.instances/
