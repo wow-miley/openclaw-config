@@ -32,6 +32,7 @@ config/
 scripts/
   setup.sh        — Server bootstrap (Node, OpenClaw, Tailscale, onboarding)
   deploy.sh       — Sync config to ~/.openclaw/ and restart gateway
+  sync-runbook.sh — Fetch latest runbook guidance and diff against local
 ```
 
 ## Configuration
@@ -46,3 +47,24 @@ Telegram is configured as a channel within that file. See the [Telegram channel 
 2. Save the bot token to `TELEGRAM_BOT_TOKEN` in `.env`
 3. After deploying, approve your first DM: `openclaw pairing approve telegram <CODE>`
 4. To use in groups: disable privacy mode via `/setprivacy` in BotFather, or make the bot a group admin
+
+## Runbook References
+
+This config follows patterns from the [OpenClaw Runbook (Non-Hype Edition)](https://github.com/digitalknk/openclaw-runbook). Sections used:
+
+| Config area | Runbook source |
+|---|---|
+| Model routing (cheap defaults, scoped fallbacks) | [config-example-guide.md § Model Configuration](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#model-configuration-agentsdefaultsmodel) |
+| Memory search (cheap embeddings) | [config-example-guide.md § Memory Search](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#memory-search-memorysearch) |
+| Context pruning (cache-ttl) | [config-example-guide.md § Context Pruning](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#context-pruning-contextpruning) |
+| Compaction / memory flush | [config-example-guide.md § Compaction](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#compaction-compactionmemoryflush) |
+| Heartbeat model | [config-example-guide.md § Heartbeat Model](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#heartbeat-model-heartbeatmodel) |
+| Concurrency limits | [config-example-guide.md § Concurrency Limits](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#concurrency-limits) |
+| Gateway auth + binding | [config-example-guide.md § Security: Gateway Binding](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#security-gateway-binding) |
+| Log redaction | [config-example-guide.md § Logging](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/config-example-guide.md#logging-redactsensitive) |
+| Tool policies (default-deny) | [security-hardening.md](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/security-hardening.md) |
+| File permissions | [security-hardening.md](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/security-hardening.md) |
+| Agent roles (main/monitor/researcher) | [agent-prompts.md](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/agent-prompts.md) |
+| Full sanitized reference config | [sanitized-config.json](https://github.com/digitalknk/openclaw-runbook/blob/main/examples/sanitized-config.json) |
+
+Run `scripts/sync-runbook.sh` to check for upstream changes to these files.
