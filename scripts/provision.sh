@@ -13,7 +13,7 @@ if [ -f "$REPO_DIR/.env" ]; then
 fi
 
 # Suppress noisy Python/urllib3 warnings from linode-cli
-export PYTHONWARNINGS="ignore::urllib3.exceptions.NotOpenSSLWarning"
+export PYTHONWARNINGS="ignore:::urllib3.*"
 
 # Helper: run linode-cli and abort with a clear message on failure
 run_linode() {
