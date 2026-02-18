@@ -61,8 +61,27 @@ else
   fi
 fi
 
+# Find linode-cli even if pip bin dir isn't on PATH
+if command -v linode-cli &> /dev/null; then
+  LINODE_CLI="linode-cli"
+else
+  LINODE_CLI=""
+  for PIP_BIN in \
+    "$(python3 -c "import site,os; print(os.path.join(site.getusersitepackages().rsplit('/lib/',1)[0],'bin'))" 2>/dev/null)" \
+    "$(python3 -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>/dev/null)"; do
+    if [ -n "$PIP_BIN" ] && [ -x "$PIP_BIN/linode-cli" ]; then
+      LINODE_CLI="$PIP_BIN/linode-cli"
+      break
+    fi
+  done
+  if [ -z "$LINODE_CLI" ]; then
+    echo "Error: linode-cli not found. Install it: pip3 install linode-cli"
+    exit 1
+  fi
+fi
+
 echo "Deleting Linode instance $INSTANCE_ID${LABEL:+ ($LABEL)}..."
-linode-cli linodes delete "$INSTANCE_ID"
+$LINODE_CLI linodes delete "$INSTANCE_ID"
 echo "Instance deleted."
 
 # Clean up local metadata

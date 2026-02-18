@@ -12,10 +12,23 @@ if [ -f "$REPO_DIR/.env" ]; then
   set +a
 fi
 
-# Check prerequisites
-if ! command -v linode-cli &> /dev/null; then
-  echo "Error: linode-cli not found. Install it: pip3 install linode-cli"
-  exit 1
+# Check prerequisites — find linode-cli even if pip bin dir isn't on PATH
+if command -v linode-cli &> /dev/null; then
+  LINODE_CLI="linode-cli"
+else
+  LINODE_CLI=""
+  for PIP_BIN in \
+    "$(python3 -c "import site,os; print(os.path.join(site.getusersitepackages().rsplit('/lib/',1)[0],'bin'))" 2>/dev/null)" \
+    "$(python3 -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>/dev/null)"; do
+    if [ -n "$PIP_BIN" ] && [ -x "$PIP_BIN/linode-cli" ]; then
+      LINODE_CLI="$PIP_BIN/linode-cli"
+      break
+    fi
+  done
+  if [ -z "$LINODE_CLI" ]; then
+    echo "Error: linode-cli not found. Install it: pip3 install linode-cli"
+    exit 1
+  fi
 fi
 
 if [ -z "${LINODE_CLI_TOKEN:-}" ]; then
@@ -58,18 +71,18 @@ fi
 echo "Syncing StackScript to Linode..."
 STACKSCRIPT_CONTENT=$(cat "$REPO_DIR/scripts/stackscript.sh")
 
-EXISTING_SS=$(linode-cli stackscripts list --is_public false --json 2>/dev/null \
+EXISTING_SS=$($LINODE_CLI stackscripts list --is_public false --json 2>/dev/null \
   | python3 -c "import sys,json; scripts=json.load(sys.stdin); matches=[s['id'] for s in scripts if s['label']=='openclaw-setup']; print(matches[0] if matches else '')" 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_SS" ]; then
   echo "Updating existing StackScript (ID: $EXISTING_SS)..."
-  linode-cli stackscripts update "$EXISTING_SS" \
+  $LINODE_CLI stackscripts update "$EXISTING_SS" \
     --script "$STACKSCRIPT_CONTENT" \
     --images "$LINODE_IMAGE" > /dev/null
   STACKSCRIPT_ID="$EXISTING_SS"
 else
   echo "Creating new StackScript..."
-  STACKSCRIPT_ID=$(linode-cli stackscripts create \
+  STACKSCRIPT_ID=$($LINODE_CLI stackscripts create \
     --label "openclaw-setup" \
     --images "$LINODE_IMAGE" \
     --script "$STACKSCRIPT_CONTENT" \
@@ -99,7 +112,7 @@ if [ -n "$SSH_KEY" ]; then
   CREATE_ARGS+=(--authorized_keys "$SSH_KEY")
 fi
 
-INSTANCE_JSON=$(linode-cli "${CREATE_ARGS[@]}")
+INSTANCE_JSON=$($LINODE_CLI "${CREATE_ARGS[@]}")
 
 INSTANCE_ID=$(echo "$INSTANCE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
 echo "Instance created (ID: $INSTANCE_ID)"
@@ -107,7 +120,7 @@ echo "Instance created (ID: $INSTANCE_ID)"
 # Wait for instance to boot
 echo "Waiting for instance to boot..."
 for i in $(seq 1 60); do
-  STATUS=$(linode-cli linodes view "$INSTANCE_ID" --json \
+  STATUS=$($LINODE_CLI linodes view "$INSTANCE_ID" --json \
     | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['status'])")
   if [ "$STATUS" = "running" ]; then
     break
@@ -119,7 +132,7 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-IP=$(linode-cli linodes view "$INSTANCE_ID" --json \
+IP=$($LINODE_CLI linodes view "$INSTANCE_ID" --json \
   | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['ipv4'][0])")
 echo "Instance running at $IP"
 
