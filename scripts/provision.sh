@@ -168,6 +168,21 @@ IP=$(run_linode linodes view "$INSTANCE_ID" --json \
   | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['ipv4'][0])" 2>/dev/null)
 echo "Instance running at $IP"
 
+# Save instance metadata early so it's available even if setup times out
+mkdir -p "$REPO_DIR/.instances"
+cat > "$REPO_DIR/.instances/$LABEL.json" << EOF
+{
+  "id": $INSTANCE_ID,
+  "label": "$LABEL",
+  "ip": "$IP",
+  "root_password": "$ROOT_PASSWORD",
+  "region": "$LINODE_REGION",
+  "type": "$LINODE_TYPE",
+  "stackscript_id": $STACKSCRIPT_ID,
+  "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+
 # Wait for StackScript to complete
 echo "Waiting for OpenClaw setup to complete (this takes a few minutes)..."
 SETUP_DONE=false
@@ -185,21 +200,9 @@ if [ "$SETUP_DONE" = false ]; then
   echo "Warning: Timed out waiting for setup to complete."
   echo "The StackScript may still be running. Check progress with:"
   echo "  ssh root@$IP 'tail -f /var/log/stackscript.log'"
+  echo "  LISH console: ssh your-user@lish-$LINODE_REGION.linode.com $LABEL"
+  echo "  Root password is saved in .instances/$LABEL.json"
 fi
-
-# Save instance metadata
-mkdir -p "$REPO_DIR/.instances"
-cat > "$REPO_DIR/.instances/$LABEL.json" << EOF
-{
-  "id": $INSTANCE_ID,
-  "label": "$LABEL",
-  "ip": "$IP",
-  "region": "$LINODE_REGION",
-  "type": "$LINODE_TYPE",
-  "stackscript_id": $STACKSCRIPT_ID,
-  "created": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
-EOF
 
 echo ""
 echo "=== OpenClaw Instance Ready ==="
@@ -209,6 +212,8 @@ echo "  IP:       $IP"
 echo "  Region:   $LINODE_REGION"
 echo "  SSH:      ssh root@$IP"
 echo "  Logs:     ssh root@$IP 'cat /var/log/stackscript.log'"
+echo "  LISH:     ssh your-user@lish-$LINODE_REGION.linode.com $LABEL"
+echo "  Metadata: .instances/$LABEL.json (includes root password)"
 echo ""
 echo "  Teardown: scripts/teardown.sh $LABEL"
 echo ""
