@@ -15,6 +15,9 @@ if [ -z "${LINODE_CLI_TOKEN:-}" ]; then
   exit 1
 fi
 
+# Suppress noisy Python/urllib3 warnings from linode-cli
+export PYTHONWARNINGS="ignore::urllib3.exceptions.NotOpenSSLWarning"
+
 # Show usage if no argument
 if [ -z "${1:-}" ]; then
   echo "Usage: scripts/teardown.sh <instance-id-or-label>"
