@@ -11,7 +11,8 @@ exec &> >(tee -a /var/log/stackscript.log)
 echo "=== OpenClaw StackScript started at $(date -u) ==="
 
 # System update
-apt-get update && apt-get -o Dpkg::Options::="--force-confold" upgrade -y
+export DEBIAN_FRONTEND=noninteractive
+apt-get update && apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade -y
 
 # Install Node.js 22+
 echo "Installing Node.js 22..."
