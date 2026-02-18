@@ -12,6 +12,38 @@ if [ -f "$REPO_DIR/.env" ]; then
   set +a
 fi
 
+# Suppress noisy Python/urllib3 warnings from linode-cli
+export PYTHONWARNINGS="ignore::urllib3.exceptions.NotOpenSSLWarning"
+
+# Helper: run linode-cli and abort with a clear message on failure
+run_linode() {
+  local output
+  local stderr_file
+  stderr_file=$(mktemp)
+  if output=$("$LINODE_CLI" "$@" 2>"$stderr_file"); then
+    rm -f "$stderr_file"
+    echo "$output"
+  else
+    local stderr_content
+    stderr_content=$(cat "$stderr_file")
+    rm -f "$stderr_file"
+    echo ""
+    echo "Error: linode-cli $1 $2 failed." >&2
+    if echo "$stderr_content" | grep -q "401"; then
+      echo "Your LINODE_CLI_TOKEN is not authorized for this operation." >&2
+      echo "Create a new token at https://cloud.linode.com/profile/tokens with these scopes:" >&2
+      echo "  Linodes: Read/Write, StackScripts: Read/Write" >&2
+    elif [ -n "$stderr_content" ]; then
+      echo "$stderr_content" >&2
+    fi
+    # Also show stdout in case the API returned an error body there
+    if [ -n "$output" ]; then
+      echo "$output" >&2
+    fi
+    exit 1
+  fi
+}
+
 # Check prerequisites — find linode-cli even if pip bin dir isn't on PATH
 if command -v linode-cli &> /dev/null; then
   LINODE_CLI="linode-cli"
@@ -71,24 +103,24 @@ fi
 echo "Syncing StackScript to Linode..."
 STACKSCRIPT_CONTENT=$(cat "$REPO_DIR/scripts/stackscript.sh")
 
-EXISTING_SS=$($LINODE_CLI stackscripts list --is_public false --json 2>/dev/null \
+EXISTING_SS=$(run_linode stackscripts list --is_public false --json \
   | python3 -c "import sys,json; scripts=json.load(sys.stdin); matches=[s['id'] for s in scripts if s['label']=='openclaw-setup']; print(matches[0] if matches else '')" 2>/dev/null || echo "")
 
 if [ -n "$EXISTING_SS" ]; then
   echo "Updating existing StackScript (ID: $EXISTING_SS)..."
-  $LINODE_CLI stackscripts update "$EXISTING_SS" \
+  run_linode stackscripts update "$EXISTING_SS" \
     --script "$STACKSCRIPT_CONTENT" \
     --images "$LINODE_IMAGE" > /dev/null
   STACKSCRIPT_ID="$EXISTING_SS"
 else
   echo "Creating new StackScript..."
-  STACKSCRIPT_ID=$($LINODE_CLI stackscripts create \
+  STACKSCRIPT_ID=$(run_linode stackscripts create \
     --label "openclaw-setup" \
     --images "$LINODE_IMAGE" \
     --script "$STACKSCRIPT_CONTENT" \
     --description "Automated OpenClaw + Telegram setup" \
     --json \
-    | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+    | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])" 2>/dev/null)
   echo "Created StackScript (ID: $STACKSCRIPT_ID)"
 fi
 
@@ -112,7 +144,7 @@ if [ -n "$SSH_KEY" ]; then
   CREATE_ARGS+=(--authorized_keys "$SSH_KEY")
 fi
 
-INSTANCE_JSON=$($LINODE_CLI "${CREATE_ARGS[@]}")
+INSTANCE_JSON=$(run_linode "${CREATE_ARGS[@]}")
 
 INSTANCE_ID=$(echo "$INSTANCE_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
 echo "Instance created (ID: $INSTANCE_ID)"
@@ -120,8 +152,8 @@ echo "Instance created (ID: $INSTANCE_ID)"
 # Wait for instance to boot
 echo "Waiting for instance to boot..."
 for i in $(seq 1 60); do
-  STATUS=$($LINODE_CLI linodes view "$INSTANCE_ID" --json \
-    | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['status'])")
+  STATUS=$(run_linode linodes view "$INSTANCE_ID" --json \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['status'])" 2>/dev/null)
   if [ "$STATUS" = "running" ]; then
     break
   fi
@@ -132,8 +164,8 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-IP=$($LINODE_CLI linodes view "$INSTANCE_ID" --json \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['ipv4'][0])")
+IP=$(run_linode linodes view "$INSTANCE_ID" --json \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['ipv4'][0])" 2>/dev/null)
 echo "Instance running at $IP"
 
 # Wait for StackScript to complete
