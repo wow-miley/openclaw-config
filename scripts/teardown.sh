@@ -16,7 +16,7 @@ if [ -z "${LINODE_CLI_TOKEN:-}" ]; then
 fi
 
 # Suppress noisy Python/urllib3 warnings from linode-cli
-export PYTHONWARNINGS="ignore::urllib3.exceptions.NotOpenSSLWarning"
+export PYTHONWARNINGS="ignore:::urllib3.*"
 
 # Show usage if no argument
 if [ -z "${1:-}" ]; then
